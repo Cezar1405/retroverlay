@@ -14,6 +14,6 @@ Instrucciones:
 5. Guarda el .cfg junto con la imagen png que usaras en la misma carpeta.
 6. En retroarch en superposiciones, busca tu archivo .cfg y listo.
 
-![Preview](preview/1.png)
-![Preview](preview/2.png)
-![Preview](preview/3.png)
+![Preview](preview/1.jpg)
+![Preview](preview/2.jpg)
+![Preview](preview/3.jpg)
