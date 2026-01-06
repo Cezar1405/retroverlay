@@ -27,38 +27,15 @@ canvas { background: white; display: block; margin: 0 auto; }
 .switch:before { position: absolute; content: ""; height: 32px; width: 32px; left: 4px; bottom: 4px; background-color: white; transition: .4s; border-radius: 50%; }
 input:checked + .switch { background-color: green; }
 input:checked + .switch:before { transform: translateX(36px); }
-.accordion-toggle {
-    display: none;
-}
-
-.accordion-label {
-    cursor: pointer;
-    font-size: 16px;
-    font-weight: bold;
-    margin: 10px 0;
-    width: 100%;
-    max-width: 520px;
-    background: #222;
-    padding: 12px;
-    border-radius: 6px;
-    text-align: center;
-}
-
-.accordion {
-    max-height: 0;
-    overflow: hidden;
-    transition: max-height 0.4s ease, opacity 0.3s ease;
-    opacity: 0;
-}
-
-.accordion-toggle:checked + .accordion-label + .accordion {
-    max-height: 2000px;
-    opacity: 1;
-}
+.accordion-toggle { display: none; }
+.accordion-label { cursor: pointer; font-size: 16px; font-weight: bold; margin: 10px 0; width: 100%; max-width: 520px; background: #222; padding: 12px; border-radius: 6px; text-align: center; }
+.accordion { max-height: 0; overflow: hidden; transition: max-height 0.4s ease, opacity 0.3s ease; opacity: 0; }
+.accordion-toggle:checked + .accordion-label + .accordion { max-height: 2000px; opacity: 1; }
 </style>
 </head>
 <body>
-
+<h1 style="font-size:20px; font-weight:bold;">RETROVERLAY</h1><br>
+<p style="color:gray;">Editor y creador de overlays personalizados para RetroArch.</p>
 <input type="file" id="imageLoader" accept="image/*" />
 
 <div id="canvasContainer">
@@ -164,6 +141,8 @@ input:checked + .switch:before { transform: translateX(36px); }
 
 <input type="text" id="filename" placeholder="Nombre del archivo">
 <button onclick="downloadConfig()">Descarga Configuración</button>
+
+<button onclick="location.reload()">Limpiar</button>
 
 <script>
 const canvas = document.getElementById('canvas');
