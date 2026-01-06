@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Image Overlay and Coordinates</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; font-family: arial; font-size: 13px; color: white;}
+body { display: flex; flex-direction: column; align-items: center; background: black; padding: 20px;}
+label { font-weight: bold; font-size: 15px; margin-bottom: 5px; display: block; }
+input, select, textarea { font-size: 15px; padding: 8px; margin-bottom: 10px; outline: none; width: 100%; max-width: 500px; color: black; }
+button { padding: 15px 20px; font-size: 16px; font-weight: bold; background: red; border: none; border-radius: 5px; cursor: pointer; margin-bottom: 15px; display: block; }
+button:hover { background: darkred; }
+#imageLoader { display: block; margin: 20px auto; padding: 10px 20px; font-size: 16px; }
+.controls { display: flex; flex-direction: column; align-items: left; background: rgba(253,253,253,0.2); padding: 15px; margin-bottom: 15px; width: 100%; max-width: 520px; border-radius: 6px;}
+#coordinates { width: 90%; max-width: 600px; height: 200px; margin: 20px auto; display: block; color: black; }
+#canvasContainer { position: relative; width: 90%; max-width: 600px; overflow-x: auto; margin-bottom: 20px;}
+canvas { background: white; display: block; margin: 0 auto; }
+.shape { position: absolute; background-color: rgba(255,0,0,0.5); cursor: move; }
+.shape .resizer { width: 10px; height: 10px; background: blue; position: absolute; right: 0; bottom: 0; cursor: se-resize; }
+.circle { border-radius: 50%; }
+.remove { font-size: 12px; padding: 4px; width: 20px; height: 20px; border-radius: 50%; position: absolute; top: -10px; left: -10px; background: black; color: white; cursor: pointer; } .invisible { display: none; }
+.v, .f { position: absolute; }
+.v { top: 50%; right: 25%; }
+.f { top: 50%; left: 25%; }
+.switch { width: 76px; height: 40px;background: red; position: absolute; transform: translateX(-50%) translateY(-50%); top: 60%; left: 50%; border-radius: 50px; }
+.switch:before { position: absolute; content: ""; height: 32px; width: 32px; left: 4px; bottom: 4px; background-color: white; transition: .4s; border-radius: 50%; }
+input:checked + .switch { background-color: green; }
+input:checked + .switch:before { transform: translateX(36px); }
+.accordion-toggle {
+    display: none;
+}
+
+.accordion-label {
+    cursor: pointer;
+    font-size: 16px;
+    font-weight: bold;
+    margin: 10px 0;
+    width: 100%;
+    max-width: 520px;
+    background: #222;
+    padding: 12px;
+    border-radius: 6px;
+    text-align: center;
+}
+
+.accordion {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.4s ease, opacity 0.3s ease;
+    opacity: 0;
+}
+
+.accordion-toggle:checked + .accordion-label + .accordion {
+    max-height: 2000px;
+    opacity: 1;
+}
+</style>
+</head>
+<body>
+
+<input type="file" id="imageLoader" accept="image/*" />
+
+<div id="canvasContainer">
+    <canvas id="canvas"></canvas>
+</div>
+
+<!-- Botones -->
+<input type="radio" name="accordion" id="toggle-buttons" class="accordion-toggle" checked="">
+<label for="toggle-buttons" class="accordion-label">
+    ⚙ Configurar Botones
+</label>
+<div id="buttonsForm" class="controls accordion">
+    <label for="overlayNumber">Overlay Number:</label>
+    <select id="overlayNumber">
+        <option value="0">0</option>
+        <option value="1">1</option>
+        <option value="2">2</option>
+        <option value="3">3</option>
+    </select>
+
+    <label for="shapeName">Nombre del botón:</label>
+    <select id="shapeName">
+        <option value="x">X</option>
+        <option value="y">Y</option>
+        <option value="b">B</option>
+        <option value="a">A</option>
+        <option value="up">↑</option>
+        <option value="left">←</option>
+        <option value="down">↓</option>
+        <option value="right">→</option>
+        <option value="l">L</option>
+        <option value="l2">L2</option>
+        <option value="r">R</option>
+        <option value="r2">R2</option>
+        <option value="start">START</option>
+        <option value="select">SELECT</option>
+        <option value="menu_toggle">MENU</option>
+        <option value="overlay_next">TEMA</option>
+        <option value="toggle_fast_forward">ADELANTAR</option>
+        <option value="rewind">REBOBINAR</option>
+        <option value="save_state">SAVE</option>
+        <option value="load_state">LOAD</option>
+    </select>
+
+    <label for="shapeWidth">Ancho:</label>
+    <input type="number" id="shapeWidth" value="150">
+
+    <label for="shapeHeight">Alto:</label>
+    <input type="number" id="shapeHeight" value="150">
+
+    <label for="shapeType">Tipo:</label>
+    <select id="shapeType">
+        <option value="circle">Circulo</option>
+        <option value="square">Cuadrado</option>
+    </select>
+
+    <label class="invisible" for="shapeOverlay">Overlay archivo:</label>
+    <input class="invisible" type="text" id="shapeOverlay" placeholder="x.png">
+
+    <button onclick="addShape()">Crea botón</button>
+</div>
+
+<!-- Palancas Analógicas -->
+<input type="radio" name="accordion" id="toggle-analog" class="accordion-toggle">
+<label for="toggle-analog" class="accordion-label">
+    🎮 Configurar Analógicos
+</label>
+<div id="analogForm" class="controls accordion">
+    <label for="analogImage">Analogo type</label>
+    <select id="analogImage">
+        <option value="analog_right">Right</option>
+        <option value="analog_left">Left</option>
+    </select>
+
+    <label class="invisible" for="analogDefault">Archivo default:</label>
+    <input class="invisible" type="text" id="analogDefault" placeholder="default.png">
+
+    <label for="analogWidth">Ancho:</label>
+    <input type="number" id="analogWidth" value="200">
+
+    <label for="analogHeight">Alto:</label>
+    <input type="number" id="analogHeight" value="200">
+
+    <label for="analogType">Tipo:</label>
+    <select id="analogType">
+        <option value="circle">Circulo</option>
+        <option value="square">Cuadrado</option>
+    </select>
+
+    <label class="invisible" for="analogRange">Range Mod:</label>
+    <input class="invisible" type="number" id="analogRange" placeholder="5">
+
+    <label class="invisible" for="analogSaturate">Saturate %:</label>
+    <input class="invisible" type="number" step="0.01" id="analogSaturate" placeholder="0.65">
+
+    <label for="analogMovable">Movable:</label>
+    <input id="analogMovable" type="checkbox" checked>
+
+    <button onclick="addAnalog()">Add Analog</button>
+</div>
+
+<textarea id="coordinates">overlays = 1</textarea>
+
+<input type="text" id="filename" placeholder="Nombre del archivo">
+<button onclick="downloadConfig()">Descarga Configuración</button>
+
+<script>
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+const imageLoader = document.getElementById('imageLoader');
+const coordinatesDiv = document.getElementById('coordinates');
+let img = new Image();
+let overlayImage = '';
+let overlayName = "overlay0";
+let shapeCounter = 0;
+let analogCounter = 0;
+
+document.getElementById('overlayNumber').addEventListener('change', function() {
+    overlayName = `overlay${this.value}`;
+    calculateCoordinates();
+});
+
+imageLoader.addEventListener('change', function(e) {
+    const reader = new FileReader();
+    reader.onload = function(event) {
+        img.onload = function() {
+            canvas.style.display = 'block';
+            canvas.width = img.width/2.5;
+            canvas.height = img.height/2.5;
+            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+            overlayImage = e.target.files[0].name.split('.')[0]+'.png';
+            calculateCoordinates();
+        };
+        img.src = event.target.result;
+    };
+    reader.readAsDataURL(e.target.files[0]);
+});
+
+// BOTONES
+function addShape() {
+    const name = document.getElementById('shapeName').value;
+    const width = parseInt(document.getElementById('shapeWidth').value/2.5);
+    const height = parseInt(document.getElementById('shapeHeight').value/2.5);
+    const type = document.getElementById('shapeType').value;
+    const overlay = document.getElementById('shapeOverlay').value || name + '.png';
+
+    const shape = document.createElement('div');
+    shape.classList.add('shape', type);
+    shape.style.width = width+'px';
+    shape.style.height = height+'px';
+    shape.style.left = '10px';
+    shape.style.top = '10px';
+    shape.dataset.name = name;
+    shape.dataset.overlay = overlay;
+    shape.dataset.movable = true;
+
+    const resizer = document.createElement('div');
+    resizer.classList.add('resizer');
+    shape.appendChild(resizer);
+    resizer.onmousedown = startResize;
+    shape.onmousedown = startDrag;
+    shape.ontouchstart = startDrag;
+
+    const removeButton = document.createElement('div');
+    removeButton.classList.add('remove');
+    removeButton.innerText = 'x';
+    removeButton.onclick = () => { shape.remove(); calculateCoordinates(); };
+    shape.appendChild(removeButton);
+
+    document.getElementById('canvasContainer').appendChild(shape);
+    shapeCounter++;
+    calculateCoordinates();
+}
+
+// PALANCAS
+function addAnalog() {
+    const name = document.getElementById('analogImage').value || 'analog_right';
+    const defaultFile = document.getElementById('analogDefault').value || 'default.png';
+    const width = parseInt(document.getElementById('analogWidth').value/2.5) || 50;
+    const height = parseInt(document.getElementById('analogHeight').value/2.5) || 50;
+    const type = document.getElementById('analogType').value;
+    const range = parseFloat(document.getElementById('analogRange').value) || 5;
+    const saturate = parseFloat(document.getElementById('analogSaturate').value) || 0.65;
+    const movable = document.getElementById('analogMovable').checked;
+
+    const shape = document.createElement('div');
+    shape.classList.add('shape', type);
+    shape.style.width = width+'px';
+    shape.style.height = height+'px';
+    shape.style.left = '10px';
+    shape.style.top = '10px';
+    shape.dataset.name = name;
+    shape.dataset.overlay = name+'.png';
+    shape.dataset.default = defaultFile;
+    shape.dataset.range = range;
+    shape.dataset.saturate = saturate;
+    shape.dataset.movable = movable;
+
+    const resizer = document.createElement('div');
+    resizer.classList.add('resizer');
+    shape.appendChild(resizer);
+    resizer.onmousedown = startResize;
+    shape.onmousedown = startDrag;
+    shape.ontouchstart = startDrag;
+
+    const removeButton = document.createElement('div');
+    removeButton.classList.add('remove');
+    removeButton.innerText = 'x';
+    removeButton.onclick = () => { shape.remove(); calculateCoordinates(); };
+    shape.appendChild(removeButton);
+
+    document.getElementById('canvasContainer').appendChild(shape);
+    analogCounter++;
+    calculateCoordinates();
+}
+
+// Drag y Resize
+function startDrag(e) {
+    e.preventDefault();
+    const shape = e.target.closest('.shape');
+    const startX = e.clientX || e.touches[0].clientX;
+    const startY = e.clientY || e.touches[0].clientY;
+    const rect = shape.getBoundingClientRect();
+    const offsetLeft = canvas.getBoundingClientRect().left;
+    const offsetTop = canvas.getBoundingClientRect().top;
+
+    const onMouseMove = (e) => {
+        const moveX = (e.clientX || e.touches[0].clientX) - startX;
+        const moveY = (e.clientY || e.touches[0].clientY) - startY;
+        let newLeft = rect.left - offsetLeft + moveX;
+        let newTop = rect.top - offsetTop + moveY;
+        newLeft = Math.max(0, Math.min(canvas.width - rect.width, newLeft));
+        newTop = Math.max(0, Math.min(canvas.height - rect.height, newTop));
+        shape.style.left = newLeft + 'px';
+        shape.style.top = newTop + 'px';
+        calculateCoordinates();
+    };
+
+    const onMouseUp = () => {
+        document.removeEventListener('mousemove', onMouseMove);
+        document.removeEventListener('mouseup', onMouseUp);
+        document.removeEventListener('touchmove', onMouseMove);
+        document.removeEventListener('touchend', onMouseUp);
+    };
+
+    document.addEventListener('mousemove', onMouseMove);
+    document.addEventListener('mouseup', onMouseUp);
+    document.addEventListener('touchmove', onMouseMove);
+    document.addEventListener('touchend', onMouseUp);
+}
+
+function startResize(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    const shape = e.target.closest('.shape');
+    const startX = e.clientX || e.touches[0].clientX;
+    const startY = e.clientY || e.touches[0].clientY;
+    const rect = shape.getBoundingClientRect();
+
+    const onMouseMove = (e) => {
+        const resizeX = (e.clientX || e.touches[0].clientX) - startX;
+        const resizeY = (e.clientY || e.touches[0].clientY) - startY;
+        shape.style.width = Math.max(20, rect.width + resizeX) + 'px';
+        shape.style.height = Math.max(20, rect.height + resizeY) + 'px';
+        calculateCoordinates();
+    };
+
+    const onMouseUp = () => {
+        document.removeEventListener('mousemove', onMouseMove);
+        document.removeEventListener('mouseup', onMouseUp);
+        document.removeEventListener('touchmove', onMouseMove);
+        document.removeEventListener('touchend', onMouseUp);
+    };
+
+    document.addEventListener('mousemove', onMouseMove);
+    document.addEventListener('mouseup', onMouseUp);
+    document.addEventListener('touchmove', onMouseMove);
+    document.addEventListener('touchend', onMouseUp);
+}
+
+// Calcular coordenadas completas
+function calculateCoordinates() {
+    const shapes = document.querySelectorAll('.shape');
+    let overlayData = `${overlayName}_name = "landscape"\n${overlayName}_overlay = ${overlayImage}\n${overlayName}_full_screen = true\n${overlayName}_normalized = true\n${overlayName}_range_mod = 1.5\n${overlayName}_alpha_mod = "0.000100"\n${overlayName}_descs = ${shapes.length}\n`;
+
+    shapes.forEach((shape, index) => {
+        const rect = shape.getBoundingClientRect();
+        const canvasRect = canvas.getBoundingClientRect();
+        const type = shape.classList.contains('circle') ? 'radial' : 'rect';
+        const width = (rect.width * 2.5) / img.width / 2;
+        const height = (rect.height * 2.5) / img.height / 2;
+        const x = ((rect.left - canvasRect.left) * 2.5) / img.width + width;
+        const y = ((rect.top - canvasRect.top) * 2.5) / img.height + height;
+
+        const name = shape.dataset.name;
+        const image = shape.dataset.image || `${name}.png`;
+        const movable = shape.dataset.movable;
+
+        if(name.toLowerCase().includes("analog")) {
+    // PALANCAS
+    overlayData += `${overlayName}_desc${index} = "${name},${x.toFixed(6)},${y.toFixed(6)},${type},${width.toFixed(6)},${height.toFixed(6)}"\n`;
+    overlayData += `${overlayName}_desc${index}_overlay = ${image}\n`;
+    overlayData += `${overlayName}_desc${index}_range_mod = 5\n`;
+    overlayData += `${overlayName}_desc${index}_saturate_pct = 0.65\n`;
+    overlayData += `${overlayName}_desc${index}_movable = ${movable}\n`;
+} else {
+    // BOTONES
+    overlayData += `${overlayName}_desc${index} = "${name},${x.toFixed(6)},${y.toFixed(6)},${type},${width.toFixed(6)},${height.toFixed(6)}"\n`;
+    overlayData += `${overlayName}_desc${index}_overlay = ${image}\n`;
+    // nada de _movable para botones
+}
+    });
+
+    coordinatesDiv.value = `overlays = 1\n` + overlayData;
+}
+
+// Descargar
+function downloadConfig() {
+    const data = coordinatesDiv.value;
+    let filename = document.getElementById('filename').value.trim() || 'config';
+    if(!filename.endsWith('.cfg')) filename += '.cfg';
+    const blob = new Blob([data], {type: 'application/octet-stream'});
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    alert('Archivo descargado: ' + filename);
+}
+</script>
+</body>
+</html>
