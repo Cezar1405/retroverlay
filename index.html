@@ -3,196 +3,694 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Image Overlay and Coordinates</title>
+<title>Retroverlay</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 <style>
-* { margin: 0; padding: 0; box-sizing: border-box; font-family: arial; font-size: 13px; color: white;}
-body { display: flex; flex-direction: column; align-items: center; background: black; padding: 20px;}
-label { font-weight: bold; font-size: 15px; margin-bottom: 5px; display: block; }
-input, select, textarea { font-size: 15px; padding: 8px; margin-bottom: 10px; outline: none; width: 100%; max-width: 500px; color: black; }
-button { padding: 15px 20px; font-size: 16px; font-weight: bold; background: red; border: none; border-radius: 5px; cursor: pointer; margin-bottom: 15px; display: block; }
-button:hover { background: darkred; }
-#imageLoader { display: block; margin: 20px auto; padding: 10px 20px; font-size: 16px; }
-.controls { display: flex; flex-direction: column; align-items: left; background: rgba(253,253,253,0.2); padding: 15px; margin-bottom: 15px; width: 100%; max-width: 520px; border-radius: 6px;}
-#coordinates { width: 90%; max-width: 600px; height: 200px; margin: 20px auto; display: block; color: black; }
-#canvasContainer { position: relative; width: 98%; max-width: 600px; overflow-x: auto; margin-bottom: 20px;}
-canvas { background: white; display: block; margin: 0 auto; }
-.shape { position: absolute; background-color: rgba(255,0,0,0.5); cursor: move; }
-.shape .resizer { width: 10px; height: 10px; background: blue; position: absolute; right: 0; bottom: 0; cursor: se-resize; }
+:root {
+    --bg: #0b0d10;
+    --bg-2: #13161b;
+    --bg-3: #1c2027;
+    --border: #2a2f38;
+    --text: #e6e8ec;
+    --text-dim: #8a919e;
+    --accent: #00e0ff;
+    --accent-2: #ff3d8b;
+    --success: #00c896;
+    --danger: #ff4757;
+    --radius: 10px;
+    --radius-sm: 7px;
+    --shadow: 0 4px 16px rgba(0,0,0,0.4);
+}
+* { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 13px; color: var(--text); }
+body { display: flex; flex-direction: column; align-items: center; background: var(--bg); padding: 24px 16px 60px; min-height: 100vh; }
+
+h1 { font-size: 26px; font-weight: 800; letter-spacing: 2px; background: linear-gradient(135deg, var(--accent), var(--accent-2)); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 4px; }
+.subtitle { color: var(--text-dim); margin-bottom: 24px; font-size: 13px; }
+
+label { font-weight: 600; font-size: 12px; margin-bottom: 6px; display: block; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-dim); }
+
+input, select, textarea {
+    font-size: 14px; padding: 10px 12px; margin-bottom: 12px;
+    background: var(--bg-2); border: 1.5px solid var(--border);
+    border-radius: var(--radius-sm); outline: none;
+    width: 100%; max-width: 500px; color: var(--text);
+    transition: border-color 0.2s, box-shadow 0.2s;
+    font-family: inherit;
+}
+input:focus, select:focus, textarea:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(0,224,255,0.15);
+}
+input[type=number] { -moz-appearance: textfield; }
+
+button {
+    padding: 11px 18px; font-size: 14px; font-weight: 600;
+    background: linear-gradient(135deg, var(--bg-3), var(--bg-2));
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-sm);
+    cursor: pointer; margin-bottom: 12px;
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+    color: var(--text);
+    transition: all 0.2s;
+    font-family: inherit;
+    letter-spacing: 0.3px;
+}
+button i { font-size: 13px; }
+button:hover { border-color: var(--accent); transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,224,255,0.15); }
+button:active { transform: translateY(0); }
+button.primary { background: linear-gradient(135deg, #0088aa, #00aacc); border-color: transparent; color: #fff; }
+button.primary:hover { background: linear-gradient(135deg, #00aacc, #00e0ff); }
+button.success { background: linear-gradient(135deg, #008a66, #00c896); border-color: transparent; color: #fff; }
+button.success:hover { background: linear-gradient(135deg, #00c896, #00e0b0); }
+button.danger { background: linear-gradient(135deg, #a52030, #ff4757); border-color: transparent; color: #fff; }
+button.danger:hover { background: linear-gradient(135deg, #ff4757, #ff6b7a); }
+
+.controls {
+    display: flex; flex-direction: column; align-items: stretch;
+    background: var(--bg-2); padding: 18px;
+    width: 100%; max-width: 540px;
+    border-radius: var(--radius); border: 1.5px solid var(--border);
+}
+
+/* Textarea readonly */
+textarea#coordinates {
+    width: 100%; max-width: 540px; height: 220px;
+    margin: 16px 0; display: block;
+    background: var(--bg-2); color: var(--text-dim);
+    font-family: 'Consolas', 'Monaco', monospace; font-size: 12px;
+    border: 1.5px solid var(--border); border-radius: var(--radius);
+    padding: 12px; resize: vertical;
+    cursor: default;
+}
+textarea#coordinates:focus { box-shadow: none; border-color: var(--border); }
+
+/* ============ CANVAS ============ */
+#canvasViewport {
+    width: 100%; max-width: 640px;
+    overflow-x: auto; overflow-y: hidden;
+    margin-bottom: 16px;
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius);
+    background: #050608;
+    padding: 8px;
+    display: none;
+    scrollbar-width: thin;
+    scrollbar-color: var(--accent) var(--bg-2);
+}
+#canvasViewport::-webkit-scrollbar { height: 10px; }
+#canvasViewport::-webkit-scrollbar-track { background: var(--bg-2); border-radius: 5px; }
+#canvasViewport::-webkit-scrollbar-thumb { background: var(--border); border-radius: 5px; }
+#canvasViewport::-webkit-scrollbar-thumb:hover { background: var(--accent); }
+
+#canvasInner { position: relative; display: inline-block; }
+canvas { background: white; display: block; }
+
+/* ============ SHAPES ============ */
+.shape { position: absolute; background-color: rgba(255,0,0,0.45); cursor: move; display: flex; align-items: center; justify-content: center; border: 1px solid rgba(255,255,255,0.4); }
+.shape .resizer { width: 10px; height: 10px; background: var(--accent); position: absolute; right: -2px; bottom: -2px; cursor: se-resize; border-radius: 50%; border: 1px solid var(--bg); }
 .circle { border-radius: 50%; }
-.remove { font-size: 12px; padding: 4px; width: 20px; height: 20px; border-radius: 50%; position: absolute; top: -10px; left: -10px; background: black; color: white; cursor: pointer; } .invisible { display: none; }
-.v, .f { position: absolute; }
-.v { top: 50%; right: 25%; }
-.f { top: 50%; left: 25%; }
-.switch { width: 76px; height: 40px;background: red; position: absolute; transform: translateX(-50%) translateY(-50%); top: 60%; left: 50%; border-radius: 50px; }
-.switch:before { position: absolute; content: ""; height: 32px; width: 32px; left: 4px; bottom: 4px; background-color: white; transition: .4s; border-radius: 50%; }
-input:checked + .switch { background-color: green; }
-input:checked + .switch:before { transform: translateX(36px); }
+.remove {
+    font-size: 12px; padding: 4px; width: 20px; height: 20px; border-radius: 50%;
+    position: absolute; top: -10px; left: -10px; background: var(--danger); color: white;
+    cursor: pointer; z-index: 10; display: flex; align-items: center; justify-content: center;
+    font-weight: bold; border: 1px solid var(--bg);
+}
+.invisible { display: none !important; }
+.shape-label {
+    font-size: 11px; font-weight: 700; color: white;
+    text-shadow: 0 0 3px black, 0 0 3px black, 0 0 3px black;
+    pointer-events: none; user-select: none;
+    text-align: center; padding: 2px; word-break: break-word;
+}
+
+/* ============ BLOQUES ============ */
+.block {
+    position: absolute; border: 2px dashed var(--accent);
+    background-color: rgba(0,224,255,0.06);
+    cursor: move; box-sizing: border-box;
+}
+.block .block-title {
+    position: absolute; top: -22px; left: 0;
+    font-size: 10px; font-weight: 700; color: var(--accent);
+    background: var(--bg-3); padding: 3px 8px; border-radius: 4px;
+    white-space: nowrap; pointer-events: none; letter-spacing: 0.5px;
+}
+.block .block-remove {
+    position: absolute; top: -10px; right: -10px;
+    width: 20px; height: 20px; border-radius: 50%;
+    background: var(--danger); color: white; font-size: 12px;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; z-index: 11; font-weight: bold;
+}
+.block .block-child {
+    position: absolute; background-color: rgba(255,0,0,0.45);
+    display: flex; align-items: center; justify-content: center;
+    pointer-events: none; border: 1px solid rgba(255,255,255,0.4);
+}
+.block .block-child.circle { border-radius: 50%; }
+.block .block-child .shape-label { font-size: 9px; padding: 1px; }
+
+/* ============ ACORDEÓN ============ */
 .accordion-toggle { display: none; }
-.accordion-label { cursor: pointer; font-size: 16px; font-weight: bold; margin: 10px 0; width: 100%; max-width: 520px; background: #222; padding: 12px; border-radius: 6px; text-align: center; }
-.accordion { max-height: 0; overflow: hidden; transition: max-height 0.4s ease, opacity 0.3s ease; opacity: 0; }
-.accordion-toggle:checked + .accordion-label + .accordion { max-height: 2000px; opacity: 1; }
+.accordion-label {
+    cursor: pointer; font-size: 14px; font-weight: 700;
+    margin: 8px 0; width: 100%; max-width: 540px;
+    background: var(--bg-2); padding: 14px 18px;
+    border-radius: var(--radius); text-align: left;
+    border: 1.5px solid var(--border);
+    transition: all 0.2s;
+    display: flex; align-items: center; justify-content: space-between; gap: 10px;
+}
+.accordion-label:hover { border-color: var(--accent); }
+.accordion-label .acc-title { display: flex; align-items: center; gap: 10px; }
+.accordion-label .acc-title i { color: var(--accent); font-size: 15px; }
+.accordion-label .acc-arrow { font-size: 12px; color: var(--text-dim); transition: transform 0.3s; }
+.accordion-toggle:checked + .accordion-label .acc-arrow { transform: rotate(180deg); }
+.accordion-toggle:checked + .accordion-label { border-color: var(--accent); border-bottom-left-radius: 0; border-bottom-right-radius: 0; }
+.accordion {
+    max-height: 0; overflow: hidden;
+    transition: max-height 0.4s ease, opacity 0.3s ease, padding 0.3s ease;
+    opacity: 0; padding: 0 18px;
+    width: 100%; max-width: 540px;
+}
+.accordion-toggle:checked + .accordion-label + .accordion {
+    max-height: 3000px; opacity: 1; padding: 18px;
+    border: 1.5px solid var(--border); border-top: none;
+    border-radius: 0 0 var(--radius) var(--radius);
+    margin-top: -8px; margin-bottom: 16px;
+    background: var(--bg-2);
+}
+
+/* ============ FILAS ============ */
+.row2 { display: flex; gap: 10px; width: 100%; max-width: 500px; }
+.row2 > div { flex: 1; }
+.row2 input, .row2 select { max-width: 100%; margin-bottom: 12px; }
+
+.alpha-presets { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
+.alpha-presets button { flex: 1; padding: 10px 8px; font-size: 12px; margin-bottom: 0; min-width: 100px; }
+.alpha-presets button.active { background: linear-gradient(135deg, #008a66, #00c896); border-color: transparent; color: #fff; }
+
+/* ============ TABS ============ */
+#tabsBar {
+    display: flex; gap: 8px; flex-wrap: wrap; align-items: center;
+    width: 100%; max-width: 640px; margin-bottom: 14px;
+    background: var(--bg-2); padding: 10px; border-radius: var(--radius);
+    border: 1.5px solid var(--border);
+}
+#tabsBar:empty { display: none; }
+.tab {
+    padding: 8px 14px; background: var(--bg-3); color: var(--text);
+    border-radius: var(--radius-sm); cursor: pointer; font-size: 13px; font-weight: 600;
+    display: flex; align-items: center; gap: 8px;
+    border: 1.5px solid transparent; transition: all 0.2s;
+}
+.tab:hover { background: var(--border); }
+.tab.active { background: linear-gradient(135deg, #0088aa, #00aacc); border-color: var(--accent); color: #fff; }
+.tab .tab-close {
+    background: rgba(0,0,0,0.5); width: 18px; height: 18px; border-radius: 50%;
+    display: inline-flex; align-items: center; justify-content: center;
+    font-size: 10px; cursor: pointer; transition: background 0.2s;
+}
+.tab .tab-close:hover { background: var(--danger); }
+#addTabBtn {
+    padding: 8px 14px; background: var(--bg-3); color: var(--accent);
+    border-radius: var(--radius-sm); cursor: pointer; font-size: 13px; font-weight: 700;
+    margin: 0; border: 1.5px dashed var(--accent);
+    transition: all 0.2s;
+}
+#addTabBtn:hover { background: rgba(0,224,255,0.1); transform: none; box-shadow: none; }
+
+/* ============ START SCREEN ============ */
+#startScreen {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    padding: 60px 20px; text-align: center;
+}
+#startScreen .start-icon {
+    font-size: 64px; color: var(--border);
+    margin-bottom: 20px;
+}
+#startScreen p {
+    color: var(--text-dim); font-size: 14px; margin-bottom: 24px;
+    max-width: 400px;
+}
+#startScreen button {
+    margin-bottom: 0;
+}
+
+/* ============ TOP ACTIONS ============ */
+#topActions {
+    display: none;
+    gap: 10px; flex-wrap: wrap; justify-content: center;
+    margin-bottom: 16px; width: 100%; max-width: 640px;
+}
+#topActions button { margin: 0; flex: 1; min-width: 180px; }
+
+/* File input oculto */
+#imageLoader { display: none; }
+
+/* Checkbox custom */
+input[type=checkbox] {
+    appearance: none; -webkit-appearance: none;
+    width: 44px; height: 24px; background: var(--bg-3);
+    border: 1.5px solid var(--border); border-radius: 20px;
+    position: relative; cursor: pointer; transition: all 0.2s;
+    padding: 0; margin-bottom: 12px; max-width: 44px;
+}
+input[type=checkbox]::before {
+    content: ''; position: absolute; width: 16px; height: 16px;
+    border-radius: 50%; background: var(--text-dim);
+    top: 2px; left: 2px; transition: all 0.2s;
+}
+input[type=checkbox]:checked { background: linear-gradient(135deg, #008a66, #00c896); border-color: transparent; }
+input[type=checkbox]:checked::before { background: white; left: 22px; }
+
+/* ============ MAIN CONTENT ============ */
+#mainContent { display: none; flex-direction: column; align-items: center; width: 100%; }
+#mainContent.visible { display: flex; }
 </style>
 </head>
 <body>
-<h1 style="font-size:20px; font-weight:bold;">RETROVERLAY</h1><br>
-<p style="color:gray;">Editor y creador de overlays personalizados para RetroArch.</p>
-<input type="file" id="imageLoader" accept="image/*" />
+<h1>RETROVERLAY</h1>
+<p class="subtitle">Editor de overlays para RetroArch</p>
 
-<div id="canvasContainer">
-    <canvas id="canvas"></canvas>
+<!-- Pantalla de inicio -->
+<div id="startScreen">
+    <i class="fa-solid fa-layer-group start-icon"></i>
+    <p>Crea tu primer overlay para empezar. Cada hoja es un overlay independiente.</p>
+    <button class="primary" onclick="addWorkspace()"><i class="fa-solid fa-plus"></i> Nueva hoja</button>
 </div>
 
-<!-- Botones -->
-<input type="radio" name="accordion" id="toggle-buttons" class="accordion-toggle" checked="">
-<label for="toggle-buttons" class="accordion-label">
-    ⚙ Configurar Botones
-</label>
-<div id="buttonsForm" class="controls accordion">
-    <label for="overlayNumber">Overlay Number:</label>
-    <select id="overlayNumber">
-        <option value="0">0</option>
-        <option value="1">1</option>
-        <option value="2">2</option>
-        <option value="3">3</option>
-    </select>
+<!-- Contenido principal (solo visible cuando hay hojas) -->
+<div id="mainContent">
 
-    <label for="shapeName">Nombre del botón:</label>
-    <select id="shapeName">
-        <option value="x">X</option>
-        <option value="y">Y</option>
-        <option value="b">B</option>
-        <option value="a">A</option>
-        <option value="up">↑</option>
-        <option value="left">←</option>
-        <option value="down">↓</option>
-        <option value="right">→</option>
-        <option value="l">L</option>
-        <option value="l2">L2</option>
-        <option value="r">R</option>
-        <option value="r2">R2</option>
-        <option value="start">START</option>
-        <option value="select">SELECT</option>
-        <option value="menu_toggle">MENU</option>
-        <option value="overlay_next">TEMA</option>
-        <option value="toggle_fast_forward">ADELANTAR</option>
-        <option value="rewind">REBOBINAR</option>
-        <option value="save_state">SAVE</option>
-        <option value="load_state">LOAD</option>
-    </select>
+    <!-- Tabs -->
+    <div id="tabsBar"></div>
 
-    <label for="shapeWidth">Ancho:</label>
-    <input type="number" id="shapeWidth" value="150">
+    <!-- Acciones superiores (cargar imagen) -->
+    <div id="topActions">
+        <button class="primary" id="loadImageBtn" onclick="document.getElementById('imageLoader').click()">
+            <i class="fa-solid fa-image"></i> <span id="loadImageText">Cargar imagen</span>
+        </button>
+    </div>
+    <input type="file" id="imageLoader" accept="image/*" />
 
-    <label for="shapeHeight">Alto:</label>
-    <input type="number" id="shapeHeight" value="150">
+    <!-- Viewport del canvas -->
+    <div id="canvasViewport">
+        <div id="canvasInner">
+            <canvas id="canvas"></canvas>
+            <div id="shapeLayer"></div>
+        </div>
+    </div>
 
-    <label for="shapeType">Tipo:</label>
-    <select id="shapeType">
-        <option value="circle">Circulo</option>
-        <option value="square">Cuadrado</option>
-    </select>
+    <!-- Configurar Botones -->
+    <input type="checkbox" id="toggle-buttons" class="accordion-toggle">
+    <label for="toggle-buttons" class="accordion-label">
+        <span class="acc-title"><i class="fa-solid fa-sliders"></i> Configurar Botones</span>
+        <i class="fa-solid fa-chevron-down acc-arrow"></i>
+    </label>
+    <div id="buttonsForm" class="accordion">
+        <div class="row2">
+            <div>
+                <label for="overlayNameInput">Overlay Name</label>
+                <input type="text" id="overlayNameInput" value="landscape">
+            </div>
+            <div>
+                <label for="rangeMod">Range Mod</label>
+                <input type="number" step="0.1" id="rangeMod" value="1.5">
+            </div>
+        </div>
 
-    <label class="invisible" for="shapeOverlay">Overlay archivo:</label>
-    <input class="invisible" type="text" id="shapeOverlay" placeholder="x.png">
+        <label for="alphaMod">Alpha Mod (opacidad)</label>
+        <input type="number" step="0.000001" id="alphaMod" value="0.000100">
+        <div class="alpha-presets">
+            <button type="button" onclick="setAlpha(1.0)">Visible 1.0</button>
+            <button type="button" onclick="setAlpha(0.5)">Semi 0.5</button>
+            <button type="button" onclick="setAlpha(0.000100)">Invisible</button>
+        </div>
 
-    <button onclick="addShape()">Crea botón</button>
+        <label for="shapeName">Nombre del botón</label>
+        <select id="shapeName">
+            <option value="x">X</option>
+            <option value="y">Y</option>
+            <option value="b">B</option>
+            <option value="a">A</option>
+            <option value="up">↑</option>
+            <option value="down">↓</option>
+            <option value="left">←</option>
+            <option value="right">→</option>
+            <option value="left|up">← ↑ (Left+Up)</option>
+            <option value="left|down">← ↓ (Left+Down)</option>
+            <option value="right|up">→ ↑ (Right+Up)</option>
+            <option value="right|down">→ ↓ (Right+Down)</option>
+            <option value="x|y">X+Y</option>
+            <option value="x|a">X+A</option>
+            <option value="y|b">Y+B</option>
+            <option value="a|b">A+B</option>
+            <option value="l">L</option>
+            <option value="l2">L2</option>
+            <option value="r">R</option>
+            <option value="r2">R2</option>
+            <option value="start">START</option>
+            <option value="select">SELECT</option>
+            <option value="menu_toggle">MENU</option>
+            <option value="overlay_next">TEMA</option>
+            <option value="toggle_fast_forward">ADELANTAR</option>
+            <option value="rewind">REBOBINAR</option>
+            <option value="save_state">SAVE</option>
+            <option value="load_state">LOAD</option>
+        </select>
+
+        <div class="row2">
+            <div>
+                <label for="shapeWidth">Ancho</label>
+                <input type="number" id="shapeWidth" value="150">
+            </div>
+            <div>
+                <label for="shapeHeight">Alto</label>
+                <input type="number" id="shapeHeight" value="150">
+            </div>
+        </div>
+
+        <label for="shapeType">Tipo</label>
+        <select id="shapeType">
+            <option value="circle">Círculo</option>
+            <option value="square">Cuadrado</option>
+        </select>
+
+        <button class="primary" onclick="addShape()"><i class="fa-solid fa-plus"></i> Crear botón</button>
+
+        <label for="blockPreset" style="margin-top:16px; color:var(--accent);">Bloques predefinidos</label>
+        <select id="blockPreset">
+            <option value="dpad">Cruzetas (← ↑ ↓ → + diagonales)</option>
+            <option value="face">Botones A/B/X/Y + combinaciones</option>
+        </select>
+        <button class="success" onclick="addBlock()"><i class="fa-solid fa-cubes"></i> Añadir bloque</button>
+    </div>
+
+    <!-- Analógicos -->
+    <input type="checkbox" id="toggle-analog" class="accordion-toggle">
+    <label for="toggle-analog" class="accordion-label">
+        <span class="acc-title"><i class="fa-solid fa-gamepad"></i> Configurar Analógicos</span>
+        <i class="fa-solid fa-chevron-down acc-arrow"></i>
+    </label>
+    <div id="analogForm" class="accordion">
+        <label for="analogImage">Analógico</label>
+        <select id="analogImage">
+            <option value="analog_right">Right</option>
+            <option value="analog_left">Left</option>
+        </select>
+
+        <div class="row2">
+            <div>
+                <label for="analogWidth">Ancho</label>
+                <input type="number" id="analogWidth" value="200">
+            </div>
+            <div>
+                <label for="analogHeight">Alto</label>
+                <input type="number" id="analogHeight" value="200">
+            </div>
+        </div>
+
+        <label for="analogType">Tipo</label>
+        <select id="analogType">
+            <option value="circle">Círculo</option>
+            <option value="square">Cuadrado</option>
+        </select>
+
+        <div class="row2">
+            <div>
+                <label for="analogRange">Range Mod</label>
+                <input type="number" id="analogRange" value="5">
+            </div>
+            <div>
+                <label for="analogSaturate">Saturate %</label>
+                <input type="number" step="0.01" id="analogSaturate" value="0.65">
+            </div>
+        </div>
+
+        <label for="analogMovable">Movable</label>
+        <input id="analogMovable" type="checkbox" checked>
+
+        <button class="primary" onclick="addAnalog()"><i class="fa-solid fa-plus"></i> Añadir analógico</button>
+    </div>
+
+    <!-- Textarea readonly -->
+    <textarea id="coordinates" readonly>overlays = 0</textarea>
+
+    <!-- Botones de acción inferiores -->
+    <div style="width:100%; max-width:540px; display:flex; gap:10px; flex-wrap:wrap;">
+        <!-- Botón oculto de parseConfig, para reactivar en el futuro -->
+        <button class="success invisible" id="parseConfigBtn" style="flex:1; min-width:200px;" onclick="parseConfig()">
+            <i class="fa-solid fa-file-import"></i> Dibujar desde texto
+        </button>
+        <button class="primary" style="flex:1; min-width:200px;" onclick="downloadConfig()">
+            <i class="fa-solid fa-download"></i> Descargar .cfg
+        </button>
+    </div>
+
+    <input type="text" id="filename" placeholder="Nombre del archivo (sin .cfg)">
+
+    <button class="danger" onclick="location.reload()"><i class="fa-solid fa-trash"></i> Limpiar todo</button>
 </div>
-
-<!-- Palancas Analógicas -->
-<input type="radio" name="accordion" id="toggle-analog" class="accordion-toggle">
-<label for="toggle-analog" class="accordion-label">
-    🎮 Configurar Analógicos
-</label>
-<div id="analogForm" class="controls accordion">
-    <label for="analogImage">Analogo type</label>
-    <select id="analogImage">
-        <option value="analog_right">Right</option>
-        <option value="analog_left">Left</option>
-    </select>
-
-    <label class="invisible" for="analogDefault">Archivo default:</label>
-    <input class="invisible" type="text" id="analogDefault" placeholder="default.png">
-
-    <label for="analogWidth">Ancho:</label>
-    <input type="number" id="analogWidth" value="200">
-
-    <label for="analogHeight">Alto:</label>
-    <input type="number" id="analogHeight" value="200">
-
-    <label for="analogType">Tipo:</label>
-    <select id="analogType">
-        <option value="circle">Circulo</option>
-        <option value="square">Cuadrado</option>
-    </select>
-
-    <label class="invisible" for="analogRange">Range Mod:</label>
-    <input class="invisible" type="number" id="analogRange" placeholder="5">
-
-    <label class="invisible" for="analogSaturate">Saturate %:</label>
-    <input class="invisible" type="number" step="0.01" id="analogSaturate" placeholder="0.65">
-
-    <label for="analogMovable">Movable:</label>
-    <input id="analogMovable" type="checkbox" checked>
-
-    <button onclick="addAnalog()">Add Analog</button>
-</div>
-
-<textarea id="coordinates">overlays = 1</textarea>
-
-<input type="text" id="filename" placeholder="Nombre del archivo">
-<button onclick="downloadConfig()">Descarga Configuración</button>
-
-<button onclick="location.reload()">Limpiar</button>
 
 <script>
 const canvas = document.getElementById('canvas');
 const ctx = canvas.getContext('2d');
 const imageLoader = document.getElementById('imageLoader');
 const coordinatesDiv = document.getElementById('coordinates');
-let img = new Image();
-let overlayImage = '';
-let overlayName = "overlay0";
-let shapeCounter = 0;
-let analogCounter = 0;
+const shapeLayer = document.getElementById('shapeLayer');
+const alphaModInput = document.getElementById('alphaMod');
+const overlayNameInput = document.getElementById('overlayNameInput');
+const rangeModInput = document.getElementById('rangeMod');
+const tabsBar = document.getElementById('tabsBar');
+const canvasViewport = document.getElementById('canvasViewport');
+const canvasInner = document.getElementById('canvasInner');
+const loadImageBtn = document.getElementById('loadImageBtn');
+const loadImageText = document.getElementById('loadImageText');
+const startScreen = document.getElementById('startScreen');
+const mainContent = document.getElementById('mainContent');
+const topActions = document.getElementById('topActions');
 
-document.getElementById('overlayNumber').addEventListener('change', function() {
-    overlayName = `overlay${this.value}`;
-    calculateCoordinates();
-});
+// ============ ESTADO MULTI-HOJA ============
+let workspaces = [];
+let activeWsId = null;
+let wsCounter = 0;
 
-imageLoader.addEventListener('change', function(e) {
-    const reader = new FileReader();
-    reader.onload = function(event) {
-        img.onload = function() {
-            canvas.style.display = 'block';
-            canvas.width = img.width/2.5;
-            canvas.height = img.height/2.5;
-            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-            overlayImage = e.target.files[0].name.split('.')[0]+'.png';
-            calculateCoordinates();
-        };
-        img.src = event.target.result;
+function getActiveWs() { return workspaces.find(w => w.id === activeWsId) || null; }
+
+// ============ TABS ============
+function renderTabs() {
+    tabsBar.innerHTML = '';
+    workspaces.forEach(ws => {
+        const tab = document.createElement('div');
+        tab.classList.add('tab');
+        if (ws.id === activeWsId) tab.classList.add('active');
+        tab.innerHTML = `<span>overlay${ws.id}: ${ws.baseName}</span>`;
+        if (workspaces.length > 1) {
+            const closeBtn = document.createElement('span');
+            closeBtn.classList.add('tab-close');
+            closeBtn.innerHTML = '<i class="fa-solid fa-xmark"></i>';
+            closeBtn.onclick = (e) => { e.stopPropagation(); removeWorkspace(ws.id); };
+            tab.appendChild(closeBtn);
+        }
+        tab.onclick = () => switchWorkspace(ws.id);
+        tabsBar.appendChild(tab);
+    });
+    const addBtn = document.createElement('button');
+    addBtn.id = 'addTabBtn';
+    addBtn.innerHTML = '<i class="fa-solid fa-plus"></i> Nueva hoja';
+    addBtn.onclick = addWorkspace;
+    tabsBar.appendChild(addBtn);
+}
+
+function addWorkspace() {
+    if (activeWsId !== null) saveActiveToWorkspace();
+    const newWs = {
+        id: wsCounter++,
+        baseName: 'landscape',
+        bgImage: '',
+        img: null,
+        alphaMod: '0.000100',
+        rangeMod: '1.5',
+        shapes: [],
+        blocks: []
     };
-    reader.readAsDataURL(e.target.files[0]);
-});
+    workspaces.push(newWs);
+    activeWsId = newWs.id;
+    renderTabs();
+    updateVisibility();
+    renderActiveWorkspace();
+    calculateAllCoordinates();
+}
 
-// BOTONES
-function addShape() {
-    const name = document.getElementById('shapeName').value;
-    const width = parseInt(document.getElementById('shapeWidth').value/2.5);
-    const height = parseInt(document.getElementById('shapeHeight').value/2.5);
-    const type = document.getElementById('shapeType').value;
-    const overlay = document.getElementById('shapeOverlay').value || name + '.png';
+function removeWorkspace(id) {
+    if (workspaces.length <= 1) {
+        // Si es la última, volvemos al inicio
+        workspaces = [];
+        activeWsId = null;
+        wsCounter = 0;
+        renderTabs();
+        updateVisibility();
+        calculateAllCoordinates();
+        return;
+    }
+    const idx = workspaces.findIndex(w => w.id === id);
+    if (idx < 0) return;
+    workspaces.splice(idx, 1);
+    renumberWorkspaces();
+    if (activeWsId === id || !workspaces.find(w => w.id === activeWsId)) {
+        activeWsId = workspaces[0].id;
+    }
+    renderTabs();
+    updateVisibility();
+    renderActiveWorkspace();
+    calculateAllCoordinates();
+}
 
+function renumberWorkspaces() {
+    workspaces.forEach((ws, i) => { ws.id = i; });
+    wsCounter = workspaces.length;
+}
+
+function switchWorkspace(id) {
+    if (activeWsId === id) return;
+    if (activeWsId !== null) saveActiveToWorkspace();
+    activeWsId = id;
+    renderTabs();
+    renderActiveWorkspace();
+    updateVisibility();
+    calculateAllCoordinates();
+}
+
+// ============ VISIBILIDAD GLOBAL ============
+function updateVisibility() {
+    if (workspaces.length === 0) {
+        startScreen.style.display = 'flex';
+        mainContent.classList.remove('visible');
+        return;
+    }
+    startScreen.style.display = 'none';
+    mainContent.classList.add('visible');
+
+    const ws = getActiveWs();
+    if (ws && ws.img) {
+        topActions.style.display = 'none';
+    } else {
+        topActions.style.display = 'flex';
+        loadImageText.textContent = 'Cargar imagen en hoja activa';
+    }
+}
+
+// ============ RENDERIZAR HOJA ACTIVA ============
+function renderActiveWorkspace() {
+    const ws = getActiveWs();
+    if (!ws) {
+        canvasViewport.style.display = 'none';
+        return;
+    }
+
+    overlayNameInput.value = ws.baseName;
+    alphaModInput.value = ws.alphaMod;
+    rangeModInput.value = ws.rangeMod;
+
+    shapeLayer.innerHTML = '';
+
+    if (!ws.img) {
+        canvasViewport.style.display = 'none';
+        return;
+    }
+
+    canvas.width = ws.img.width/2.5;
+    canvas.height = ws.img.height/2.5;
+    canvas.style.width = canvas.width + 'px';
+    canvas.style.height = canvas.height + 'px';
+
+    canvasInner.style.width = canvas.width + 'px';
+    canvasInner.style.height = canvas.height + 'px';
+
+    shapeLayer.style.width = canvas.width + 'px';
+    shapeLayer.style.height = canvas.height + 'px';
+    shapeLayer.style.top = '0';
+    shapeLayer.style.left = '0';
+
+    ctx.drawImage(ws.img, 0, 0, canvas.width, canvas.height);
+    canvasViewport.style.display = 'block';
+
+    ws.shapes.forEach(s => recreateShape(s));
+    ws.blocks.forEach(b => recreateBlock(b));
+}
+
+// ============ GUARDAR ESTADO ============
+function saveActiveToWorkspace() {
+    const ws = getActiveWs();
+    if (!ws) return;
+    ws.baseName = overlayNameInput.value || 'landscape';
+    ws.alphaMod = alphaModInput.value || '0.000100';
+    ws.rangeMod = rangeModInput.value || '1.5';
+
+    ws.shapes = [];
+    ws.blocks = [];
+
+    shapeLayer.querySelectorAll(':scope > .shape').forEach(el => {
+        ws.shapes.push({
+            name: el.dataset.name,
+            overlay: el.dataset.overlay,
+            type: el.classList.contains('circle') ? 'circle' : 'square',
+            left: parseFloat(el.style.left) || 0,
+            top: parseFloat(el.style.top) || 0,
+            width: el.offsetWidth,
+            height: el.offsetHeight,
+            movable: el.dataset.movable,
+            range: el.dataset.range,
+            saturate: el.dataset.saturate,
+            default: el.dataset.default
+        });
+    });
+
+    shapeLayer.querySelectorAll(':scope > .block').forEach(el => {
+        const children = [];
+        el.querySelectorAll('.block-child').forEach(c => {
+            children.push({
+                name: c.dataset.name,
+                overlay: c.dataset.overlay,
+                type: c.dataset.type,
+                relLeft: parseFloat(c.style.left) || 0,
+                relTop: parseFloat(c.style.top) || 0,
+                relW: c.offsetWidth,
+                relH: c.offsetHeight
+            });
+        });
+        ws.blocks.push({
+            title: el.querySelector('.block-title').innerText,
+            left: parseFloat(el.style.left) || 0,
+            top: parseFloat(el.style.top) || 0,
+            width: el.offsetWidth,
+            height: el.offsetHeight,
+            children: children
+        });
+    });
+}
+
+// ============ RECREAR SHAPES/BLOQUES ============
+function recreateShape(data) {
     const shape = document.createElement('div');
-    shape.classList.add('shape', type);
-    shape.style.width = width+'px';
-    shape.style.height = height+'px';
-    shape.style.left = '10px';
-    shape.style.top = '10px';
-    shape.dataset.name = name;
-    shape.dataset.overlay = overlay;
-    shape.dataset.movable = true;
+    shape.classList.add('shape');
+    shape.classList.add(data.type === 'circle' ? 'circle' : 'square');
+    shape.style.width = data.width + 'px';
+    shape.style.height = data.height + 'px';
+    shape.style.left = data.left + 'px';
+    shape.style.top = data.top + 'px';
+    shape.dataset.name = data.name;
+    shape.dataset.overlay = data.overlay || '';
+    shape.dataset.movable = data.movable ?? true;
+    if (data.range) shape.dataset.range = data.range;
+    if (data.saturate) shape.dataset.saturate = data.saturate;
+    if (data.default) shape.dataset.default = data.default;
+
+    const label = document.createElement('span');
+    label.classList.add('shape-label');
+    label.innerText = data.name.replace(/\|/g, ' / ');
+    shape.appendChild(label);
 
     const resizer = document.createElement('div');
     resizer.classList.add('resizer');
@@ -203,77 +701,272 @@ function addShape() {
 
     const removeButton = document.createElement('div');
     removeButton.classList.add('remove');
-    removeButton.innerText = 'x';
-    removeButton.onclick = () => { shape.remove(); calculateCoordinates(); };
+    removeButton.innerHTML = '<i class="fa-solid fa-xmark"></i>';
+    removeButton.onclick = (e) => { e.stopPropagation(); shape.remove(); saveActiveToWorkspace(); calculateAllCoordinates(); };
     shape.appendChild(removeButton);
 
-    document.getElementById('canvasContainer').appendChild(shape);
-    shapeCounter++;
-    calculateCoordinates();
+    shapeLayer.appendChild(shape);
+    return shape;
 }
 
-// PALANCAS
+function recreateBlock(data) {
+    const block = document.createElement('div');
+    block.classList.add('block');
+    block.style.left = data.left + 'px';
+    block.style.top = data.top + 'px';
+    block.style.width = data.width + 'px';
+    block.style.height = data.height + 'px';
+
+    const blockTitle = document.createElement('div');
+    blockTitle.classList.add('block-title');
+    blockTitle.innerText = data.title;
+    block.appendChild(blockTitle);
+
+    const blockRemove = document.createElement('div');
+    blockRemove.classList.add('block-remove');
+    blockRemove.innerHTML = '<i class="fa-solid fa-xmark"></i>';
+    blockRemove.onclick = (e) => { e.stopPropagation(); block.remove(); saveActiveToWorkspace(); calculateAllCoordinates(); };
+    block.appendChild(blockRemove);
+
+    data.children.forEach(child => {
+        const childEl = document.createElement('div');
+        childEl.classList.add('block-child');
+        if (child.type === 'radial' || child.type === 'circle') childEl.classList.add('circle');
+        childEl.style.width  = child.relW + 'px';
+        childEl.style.height = child.relH + 'px';
+        childEl.style.left   = child.relLeft + 'px';
+        childEl.style.top    = child.relTop + 'px';
+        childEl.dataset.name = child.name;
+        childEl.dataset.overlay = child.overlay || '';
+        childEl.dataset.type = child.type;
+
+        const lbl = document.createElement('span');
+        lbl.classList.add('shape-label');
+        lbl.innerText = child.name.replace(/\|/g, '/');
+        childEl.appendChild(lbl);
+
+        block.appendChild(childEl);
+    });
+
+    block.onmousedown = startBlockDrag;
+    block.ontouchstart = startBlockDrag;
+    shapeLayer.appendChild(block);
+    return block;
+}
+
+// ============ INPUTS ============
+alphaModInput.addEventListener('input', () => {
+    const ws = getActiveWs();
+    if (ws) ws.alphaMod = alphaModInput.value;
+    calculateAllCoordinates();
+});
+overlayNameInput.addEventListener('input', () => {
+    const ws = getActiveWs();
+    if (ws) { ws.baseName = overlayNameInput.value || 'landscape'; renderTabs(); }
+    calculateAllCoordinates();
+});
+rangeModInput.addEventListener('input', () => {
+    const ws = getActiveWs();
+    if (ws) ws.rangeMod = rangeModInput.value;
+    calculateAllCoordinates();
+});
+
+function setAlpha(val) {
+    alphaModInput.value = val;
+    const ws = getActiveWs();
+    if (ws) ws.alphaMod = val;
+    document.querySelectorAll('.alpha-presets button').forEach(b => b.classList.remove('active'));
+    const buttons = document.querySelectorAll('.alpha-presets button');
+    if (val === 1.0) buttons[0].classList.add('active');
+    else if (val === 0.5) buttons[1].classList.add('active');
+    else if (val === 0.0001) buttons[2].classList.add('active');
+    calculateAllCoordinates();
+}
+
+// ============ CARGA DE IMAGEN ============
+imageLoader.addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    let ws = getActiveWs();
+    if (!ws) { addWorkspace(); ws = getActiveWs(); }
+    const reader = new FileReader();
+    reader.onload = function(event) {
+        const newImg = new Image();
+        newImg.onload = function() {
+            ws.img = newImg;
+            ws.bgImage = file.name.split('.')[0]+'.png';
+            renderActiveWorkspace();
+            updateVisibility();
+            calculateAllCoordinates();
+        };
+        newImg.src = event.target.result;
+    };
+    reader.readAsDataURL(file);
+    imageLoader.value = '';
+});
+
+// ============ AÑADIR SHAPE ============
+function addShape() {
+    const ws = getActiveWs();
+    if (!ws || !ws.img) { alert('Carga primero una imagen en esta hoja.'); return; }
+    const name = document.getElementById('shapeName').value;
+    const width = parseInt(document.getElementById('shapeWidth').value/2.5);
+    const height = parseInt(document.getElementById('shapeHeight').value/2.5);
+    const type = document.getElementById('shapeType').value;
+    recreateShape({ name, overlay: name + '.png', type: type === 'circle' ? 'circle' : 'square', left: 10, top: 10, width, height, movable: true });
+    saveActiveToWorkspace();
+    calculateAllCoordinates();
+}
+
 function addAnalog() {
+    const ws = getActiveWs();
+    if (!ws || !ws.img) { alert('Carga primero una imagen en esta hoja.'); return; }
     const name = document.getElementById('analogImage').value || 'analog_right';
-    const defaultFile = document.getElementById('analogDefault').value || 'default.png';
     const width = parseInt(document.getElementById('analogWidth').value/2.5) || 50;
     const height = parseInt(document.getElementById('analogHeight').value/2.5) || 50;
     const type = document.getElementById('analogType').value;
     const range = parseFloat(document.getElementById('analogRange').value) || 5;
     const saturate = parseFloat(document.getElementById('analogSaturate').value) || 0.65;
     const movable = document.getElementById('analogMovable').checked;
-
-    const shape = document.createElement('div');
-    shape.classList.add('shape', type);
-    shape.style.width = width+'px';
-    shape.style.height = height+'px';
-    shape.style.left = '10px';
-    shape.style.top = '10px';
-    shape.dataset.name = name;
-    shape.dataset.overlay = name+'.png';
-    shape.dataset.default = defaultFile;
-    shape.dataset.range = range;
-    shape.dataset.saturate = saturate;
-    shape.dataset.movable = movable;
-
-    const resizer = document.createElement('div');
-    resizer.classList.add('resizer');
-    shape.appendChild(resizer);
-    resizer.onmousedown = startResize;
-    shape.onmousedown = startDrag;
-    shape.ontouchstart = startDrag;
-
-    const removeButton = document.createElement('div');
-    removeButton.classList.add('remove');
-    removeButton.innerText = 'x';
-    removeButton.onclick = () => { shape.remove(); calculateCoordinates(); };
-    shape.appendChild(removeButton);
-
-    document.getElementById('canvasContainer').appendChild(shape);
-    analogCounter++;
-    calculateCoordinates();
+    recreateShape({ name, overlay: name+'.png', type: type === 'circle' ? 'circle' : 'square', left: 10, top: 10, width, height, movable, range, saturate });
+    saveActiveToWorkspace();
+    calculateAllCoordinates();
 }
 
-// Drag y Resize
-function startDrag(e) {
+// ============ BLOQUES ============
+const BLOCK_PRESETS = {
+    dpad: {
+        title: 'Cruzetas',
+        children: [
+            { name: 'left',        x: 0.07002, y: 0.68799, w: 0.03643, h: 0.08096, type: 'radial', overlay: 'dpad-left_psx.png' },
+            { name: 'right',       x: 0.17794, y: 0.69153, w: 0.03732, h: 0.08293, type: 'radial', overlay: 'dpad-right_psx.png' },
+            { name: 'up',          x: 0.12320, y: 0.57480, w: 0.03778, h: 0.08396, type: 'radial', overlay: 'dpad-up_psx.png' },
+            { name: 'down',        x: 0.12203, y: 0.80590, w: 0.03814, h: 0.08476, type: 'radial', overlay: 'dpad-down_psx.png' },
+            { name: 'left|up',     x: 0.06426, y: 0.55829, w: 0.02416, h: 0.05370, type: 'rect',   overlay: null },
+            { name: 'right|up',    x: 0.18099, y: 0.56065, w: 0.02416, h: 0.05370, type: 'rect',   overlay: null },
+            { name: 'left|down',   x: 0.06308, y: 0.81887, w: 0.02416, h: 0.05370, type: 'rect',   overlay: null },
+            { name: 'right|down',  x: 0.18217, y: 0.82122, w: 0.02416, h: 0.05370, type: 'rect',   overlay: null }
+        ]
+    },
+    face: {
+        title: 'Faciales',
+        children: [
+            { name: 'a',   x: 0.93695, y: 0.69506, w: 0.04167, h: 0.09260, type: 'radial', overlay: 'circle.png' },
+            { name: 'b',   x: 0.87121, y: 0.82476, w: 0.04167, h: 0.09260, type: 'radial', overlay: 'cross.png' },
+            { name: 'x',   x: 0.87035, y: 0.56065, w: 0.04167, h: 0.09260, type: 'radial', overlay: 'triangle.png' },
+            { name: 'y',   x: 0.80666, y: 0.69624, w: 0.04167, h: 0.09260, type: 'radial', overlay: 'square.png' },
+            { name: 'x|y', x: 0.82476, y: 0.59720, w: 0.01111, h: 0.02469, type: 'radial', overlay: null },
+            { name: 'x|y', x: 0.81415, y: 0.57598, w: 0.01111, h: 0.02469, type: 'radial', overlay: null },
+            { name: 'a|b', x: 0.92380, y: 0.81179, w: 0.01111, h: 0.02469, type: 'radial', overlay: null },
+            { name: 'a|b', x: 0.91791, y: 0.79646, w: 0.01111, h: 0.02469, type: 'radial', overlay: null },
+            { name: 'y|b', x: 0.83105, y: 0.77170, w: 0.01111, h: 0.02469, type: 'radial', overlay: null },
+            { name: 'y|b', x: 0.82004, y: 0.80943, w: 0.01111, h: 0.02469, type: 'radial', overlay: null },
+            { name: 'x|a', x: 0.91791, y: 0.59720, w: 0.01111, h: 0.02469, type: 'radial', overlay: null },
+            { name: 'x|a', x: 0.92734, y: 0.57244, w: 0.01111, h: 0.02469, type: 'radial', overlay: null }
+        ]
+    }
+};
+
+function addBlock() {
+    const ws = getActiveWs();
+    if (!ws || !ws.img) { alert('Carga primero una imagen en esta hoja.'); return; }
+    const preset = BLOCK_PRESETS[document.getElementById('blockPreset').value];
+    if (!preset) return;
+
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    preset.children.forEach(c => {
+        const px = c.x * ws.img.width / 2.5;
+        const py = c.y * ws.img.height / 2.5;
+        const pw = c.w * 2 * ws.img.width / 2.5;
+        const ph = c.h * 2 * ws.img.height / 2.5;
+        minX = Math.min(minX, px - pw/2);
+        minY = Math.min(minY, py - ph/2);
+        maxX = Math.max(maxX, px + pw/2);
+        maxY = Math.max(maxY, py + ph/2);
+    });
+
+    const pad = 15;
+    const bLeft = Math.max(0, minX - pad);
+    const bTop = Math.max(0, minY - pad);
+    const bWidth = (maxX - minX) + pad * 2;
+    const bHeight = (maxY - minY) + pad * 2;
+
+    const childrenData = preset.children.map(c => {
+        const px = c.x * ws.img.width / 2.5;
+        const py = c.y * ws.img.height / 2.5;
+        const pw = c.w * 2 * ws.img.width / 2.5;
+        const ph = c.h * 2 * ws.img.height / 2.5;
+        return {
+            name: c.name, overlay: c.overlay || '', type: c.type,
+            relLeft: (px - bLeft) - pw/2, relTop: (py - bTop) - ph/2,
+            relW: pw, relH: ph
+        };
+    });
+
+    recreateBlock({ title: preset.title, left: bLeft, top: bTop, width: bWidth, height: bHeight, children: childrenData });
+    saveActiveToWorkspace();
+    calculateAllCoordinates();
+}
+
+// ============ DRAG / RESIZE ============
+function startBlockDrag(e) {
+    if (e.target.classList.contains('block-remove')) return;
     e.preventDefault();
-    const shape = e.target.closest('.shape');
+    const block = e.target.closest('.block');
+    if (!block) return;
     const startX = e.clientX || e.touches[0].clientX;
     const startY = e.clientY || e.touches[0].clientY;
-    const rect = shape.getBoundingClientRect();
-    const offsetLeft = canvas.getBoundingClientRect().left;
-    const offsetTop = canvas.getBoundingClientRect().top;
+    const rect = block.getBoundingClientRect();
+    const initLeft = parseFloat(block.style.left) || 0;
+    const initTop = parseFloat(block.style.top) || 0;
 
     const onMouseMove = (e) => {
         const moveX = (e.clientX || e.touches[0].clientX) - startX;
         const moveY = (e.clientY || e.touches[0].clientY) - startY;
-        let newLeft = rect.left - offsetLeft + moveX;
-        let newTop = rect.top - offsetTop + moveY;
+        let newLeft = initLeft + moveX;
+        let newTop = initTop + moveY;
         newLeft = Math.max(0, Math.min(canvas.width - rect.width, newLeft));
         newTop = Math.max(0, Math.min(canvas.height - rect.height, newTop));
+        block.style.left = newLeft + 'px';
+        block.style.top = newTop + 'px';
+        saveActiveToWorkspace();
+        calculateAllCoordinates();
+    };
+
+    const onMouseUp = () => {
+        document.removeEventListener('mousemove', onMouseMove);
+        document.removeEventListener('mouseup', onMouseUp);
+        document.removeEventListener('touchmove', onMouseMove);
+        document.removeEventListener('touchend', onMouseUp);
+    };
+
+    document.addEventListener('mousemove', onMouseMove);
+    document.addEventListener('mouseup', onMouseUp);
+    document.addEventListener('touchmove', onMouseMove);
+    document.addEventListener('touchend', onMouseUp);
+}
+
+function startDrag(e) {
+    if (e.target.classList.contains('remove') || e.target.classList.contains('resizer')) return;
+    e.preventDefault();
+    const shape = e.target.closest('.shape');
+    if (!shape) return;
+    const startX = e.clientX || e.touches[0].clientX;
+    const startY = e.clientY || e.touches[0].clientY;
+    const initLeft = parseFloat(shape.style.left) || 0;
+    const initTop = parseFloat(shape.style.top) || 0;
+
+    const onMouseMove = (e) => {
+        const moveX = (e.clientX || e.touches[0].clientX) - startX;
+        const moveY = (e.clientY || e.touches[0].clientY) - startY;
+        let newLeft = initLeft + moveX;
+        let newTop = initTop + moveY;
+        newLeft = Math.max(0, Math.min(canvas.width - shape.offsetWidth, newLeft));
+        newTop = Math.max(0, Math.min(canvas.height - shape.offsetHeight, newTop));
         shape.style.left = newLeft + 'px';
         shape.style.top = newTop + 'px';
-        calculateCoordinates();
+        saveActiveToWorkspace();
+        calculateAllCoordinates();
     };
 
     const onMouseUp = () => {
@@ -293,16 +986,19 @@ function startResize(e) {
     e.preventDefault();
     e.stopPropagation();
     const shape = e.target.closest('.shape');
+    if (!shape) return;
     const startX = e.clientX || e.touches[0].clientX;
     const startY = e.clientY || e.touches[0].clientY;
-    const rect = shape.getBoundingClientRect();
+    const initW = shape.offsetWidth;
+    const initH = shape.offsetHeight;
 
     const onMouseMove = (e) => {
         const resizeX = (e.clientX || e.touches[0].clientX) - startX;
         const resizeY = (e.clientY || e.touches[0].clientY) - startY;
-        shape.style.width = Math.max(20, rect.width + resizeX) + 'px';
-        shape.style.height = Math.max(20, rect.height + resizeY) + 'px';
-        calculateCoordinates();
+        shape.style.width = Math.max(20, initW + resizeX) + 'px';
+        shape.style.height = Math.max(20, initH + resizeY) + 'px';
+        saveActiveToWorkspace();
+        calculateAllCoordinates();
     };
 
     const onMouseUp = () => {
@@ -318,43 +1014,231 @@ function startResize(e) {
     document.addEventListener('touchend', onMouseUp);
 }
 
-// Calcular coordenadas completas
-function calculateCoordinates() {
-    const shapes = document.querySelectorAll('.shape');
-    let overlayData = `${overlayName}_name = "landscape"\n${overlayName}_overlay = ${overlayImage}\n${overlayName}_full_screen = true\n${overlayName}_normalized = true\n${overlayName}_range_mod = 1.5\n${overlayName}_alpha_mod = "0.000100"\n${overlayName}_descs = ${shapes.length}\n`;
-
-    shapes.forEach((shape, index) => {
-        const rect = shape.getBoundingClientRect();
-        const canvasRect = canvas.getBoundingClientRect();
-        const type = shape.classList.contains('circle') ? 'radial' : 'rect';
-        const width = (rect.width * 2.5) / img.width / 2;
-        const height = (rect.height * 2.5) / img.height / 2;
-        const x = ((rect.left - canvasRect.left) * 2.5) / img.width + width;
-        const y = ((rect.top - canvasRect.top) * 2.5) / img.height + height;
-
-        const name = shape.dataset.name;
-        const image = shape.dataset.image || `${name}.png`;
-        const movable = shape.dataset.movable;
-
-        if(name.toLowerCase().includes("analog")) {
-    // PALANCAS
-    overlayData += `${overlayName}_desc${index} = "${name},${x.toFixed(6)},${y.toFixed(6)},${type},${width.toFixed(6)},${height.toFixed(6)}"\n`;
-    overlayData += `${overlayName}_desc${index}_overlay = ${image}\n`;
-    overlayData += `${overlayName}_desc${index}_range_mod = 5\n`;
-    overlayData += `${overlayName}_desc${index}_saturate_pct = 0.65\n`;
-    overlayData += `${overlayName}_desc${index}_movable = ${movable}\n`;
-} else {
-    // BOTONES
-    overlayData += `${overlayName}_desc${index} = "${name},${x.toFixed(6)},${y.toFixed(6)},${type},${width.toFixed(6)},${height.toFixed(6)}"\n`;
-    overlayData += `${overlayName}_desc${index}_overlay = ${image}\n`;
-    // nada de _movable para botones
+// ============ CALCULAR COORDENADAS ============
+function calculateAllCoordinates() {
+    saveActiveToWorkspace();
+    let out = `overlays = ${workspaces.length}\n`;
+    workspaces.forEach(ws => {
+        out += `\n${overlayBlockFor(ws)}`;
+    });
+    coordinatesDiv.value = out.trim() + '\n';
 }
+
+function overlayBlockFor(ws) {
+    const overlayName = `overlay${ws.id}`;
+    const shapes = ws.shapes || [];
+    const blocks = ws.blocks || [];
+    let totalDescs = shapes.length;
+    blocks.forEach(b => totalDescs += b.children.length);
+
+    let data = `${overlayName}_name = "${ws.baseName}"\n`;
+    data += `${overlayName}_overlay = ${ws.bgImage || 'background.png'}\n`;
+    data += `${overlayName}_full_screen = true\n`;
+    data += `${overlayName}_normalized = true\n`;
+    data += `${overlayName}_range_mod = ${ws.rangeMod}\n`;
+    data += `${overlayName}_alpha_mod = "${ws.alphaMod}"\n`;
+    data += `${overlayName}_descs = ${totalDescs}\n`;
+
+    if (!ws.img) return data;
+
+    let descIndex = 0;
+
+    shapes.forEach(s => {
+        const type = s.type === 'circle' ? 'radial' : 'rect';
+        const width = (s.width * 2.5) / ws.img.width / 2;
+        const height = (s.height * 2.5) / ws.img.height / 2;
+        const x = (s.left * 2.5) / ws.img.width + width;
+        const y = (s.top * 2.5) / ws.img.height + height;
+        const isAnalog = s.name.toLowerCase().includes('analog');
+        data += `${overlayName}_desc${descIndex} = "${s.name},${x.toFixed(6)},${y.toFixed(6)},${type},${width.toFixed(6)},${height.toFixed(6)}"\n`;
+        if (s.overlay) data += `${overlayName}_desc${descIndex}_overlay = ${s.overlay}\n`;
+        if (isAnalog) {
+            data += `${overlayName}_desc${descIndex}_range_mod = ${s.range || 5}\n`;
+            data += `${overlayName}_desc${descIndex}_saturate_pct = ${s.saturate || 0.65}\n`;
+            data += `${overlayName}_desc${descIndex}_movable = ${s.movable}\n`;
+        }
+        descIndex++;
     });
 
-    coordinatesDiv.value = `overlays = 1\n` + overlayData;
+    blocks.forEach(b => {
+        b.children.forEach(child => {
+            const absLeft = b.left + child.relLeft;
+            const absTop = b.top + child.relTop;
+            const type = (child.type === 'radial' || child.type === 'circle') ? 'radial' : 'rect';
+            const width = (child.relW * 2.5) / ws.img.width / 2;
+            const height = (child.relH * 2.5) / ws.img.height / 2;
+            const x = (absLeft * 2.5) / ws.img.width + width;
+            const y = (absTop * 2.5) / ws.img.height + height;
+            data += `${overlayName}_desc${descIndex} = "${child.name},${x.toFixed(6)},${y.toFixed(6)},${type},${width.toFixed(6)},${height.toFixed(6)}"\n`;
+            if (child.overlay) data += `${overlayName}_desc${descIndex}_overlay = ${child.overlay}\n`;
+            descIndex++;
+        });
+    });
+
+    return data;
 }
 
-// Descargar
+// ============ PARSER (oculto, para futuras versiones) ============
+function parseConfig() {
+    const text = coordinatesDiv.value;
+    const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+
+    const overlaysData = {};
+    function ensure(num) {
+        if (!overlaysData[num]) overlaysData[num] = { name: 'landscape', bg: '', alpha: '0.000100', range: '1.5', descs: {}, analogProps: {} };
+        return overlaysData[num];
+    }
+
+    lines.forEach(line => {
+        let m;
+        if ((m = line.match(/^(overlay\d+)_name\s*=\s*"([^"]+)"/))) { ensure(parseInt(m[1].replace('overlay',''))).name = m[2]; return; }
+        if ((m = line.match(/^(overlay\d+)_alpha_mod\s*=\s*"?([^"\s]+)"?/))) { ensure(parseInt(m[1].replace('overlay',''))).alpha = m[2]; return; }
+        if ((m = line.match(/^(overlay\d+)_range_mod\s*=\s*"?([^"\s]+)"?/))) { ensure(parseInt(m[1].replace('overlay',''))).range = m[2]; return; }
+        if (line.match(/^(overlay\d+)_descs\s*=/)) return;
+        if ((m = line.match(/^(overlay\d+)_desc(\d+)\s*=\s*"([^"]+)"/))) {
+            const num = parseInt(m[1].replace('overlay',''));
+            const idx = m[2];
+            const parts = m[3].split(',').map(p => p.trim());
+            if (parts.length >= 6) {
+                ensure(num).descs[idx] = {
+                    name: parts[0], x: parseFloat(parts[1]), y: parseFloat(parts[2]),
+                    type: parts[3], w: parseFloat(parts[4]), h: parseFloat(parts[5]), overlay: null
+                };
+            }
+            return;
+        }
+        if ((m = line.match(/^(overlay\d+)_desc(\d+)_(\w+)\s*=\s*(.+)$/))) {
+            const num = parseInt(m[1].replace('overlay',''));
+            const idx = m[2];
+            const prop = m[3];
+            const value = m[4].replace(/"/g, '').trim();
+            const od = ensure(num);
+            if (od.descs[idx]) {
+                if (prop === 'overlay') od.descs[idx].overlay = value;
+                if (prop === 'range_mod' || prop === 'saturate_pct' || prop === 'movable') {
+                    if (!od.analogProps[idx]) od.analogProps[idx] = {};
+                    od.analogProps[idx][prop] = value;
+                }
+            }
+            return;
+        }
+        if ((m = line.match(/^(overlay\d+)_overlay\s*=\s*(.+)$/))) {
+            if (/_desc\d+_overlay/.test(line)) return;
+            ensure(parseInt(m[1].replace('overlay',''))).bg = m[2].replace(/"/g, '').trim();
+            return;
+        }
+    });
+
+    const nums = Object.keys(overlaysData).map(n => parseInt(n)).sort((a,b)=>a-b);
+    if (nums.length === 0) { alert('No se detectaron overlays.'); return; }
+
+    let referenceImg = null;
+    for (const ws of workspaces) {
+        if (ws.img) { referenceImg = ws.img; break; }
+    }
+    if (!referenceImg) {
+        alert('⚠️ Carga primero una imagen en alguna hoja para importar (se usará como referencia).');
+        return;
+    }
+
+    workspaces = [];
+    wsCounter = 0;
+
+    nums.forEach(num => {
+        const od = overlaysData[num];
+        const ws = {
+            id: wsCounter++,
+            baseName: od.name,
+            bgImage: od.bg || '',
+            img: referenceImg,
+            alphaMod: od.alpha,
+            rangeMod: od.range,
+            shapes: [],
+            blocks: []
+        };
+
+        const descIndices = Object.keys(od.descs).sort((a,b)=>parseInt(a)-parseInt(b));
+        const used = new Set();
+
+        Object.keys(BLOCK_PRESETS).forEach(presetKey => {
+            const preset = BLOCK_PRESETS[presetKey];
+            const needed = preset.children.map(c => c.name);
+            const matches = [];
+            for (const idx of descIndices) {
+                if (used.has(idx)) continue;
+                if (needed.includes(od.descs[idx].name)) {
+                    matches.push(idx);
+                    if (matches.length === needed.length) break;
+                }
+            }
+            if (matches.length === needed.length) {
+                const foundNames = matches.map(i => od.descs[i].name).sort();
+                const neededNames = [...needed].sort();
+                if (JSON.stringify(foundNames) === JSON.stringify(neededNames)) {
+                    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+                    matches.forEach(i => {
+                        const d = od.descs[i];
+                        const px = d.x * referenceImg.width / 2.5;
+                        const py = d.y * referenceImg.height / 2.5;
+                        const pw = d.w * 2 * referenceImg.width / 2.5;
+                        const ph = d.h * 2 * referenceImg.height / 2.5;
+                        minX = Math.min(minX, px - pw/2);
+                        minY = Math.min(minY, py - ph/2);
+                        maxX = Math.max(maxX, px + pw/2);
+                        maxY = Math.max(maxY, py + ph/2);
+                    });
+                    const pad = 15;
+                    const bLeft = Math.max(0, minX - pad);
+                    const bTop = Math.max(0, minY - pad);
+                    const bWidth = (maxX - minX) + pad * 2;
+                    const bHeight = (maxY - minY) + pad * 2;
+                    const childrenData = matches.map(i => {
+                        const d = od.descs[i];
+                        const px = d.x * referenceImg.width / 2.5;
+                        const py = d.y * referenceImg.height / 2.5;
+                        const pw = d.w * 2 * referenceImg.width / 2.5;
+                        const ph = d.h * 2 * referenceImg.height / 2.5;
+                        return {
+                            name: d.name, overlay: d.overlay || '', type: d.type,
+                            relLeft: (px - bLeft) - pw/2, relTop: (py - bTop) - ph/2,
+                            relW: pw, relH: ph
+                        };
+                    });
+                    ws.blocks.push({ title: preset.title, left: bLeft, top: bTop, width: bWidth, height: bHeight, children: childrenData });
+                    matches.forEach(i => used.add(i));
+                }
+            }
+        });
+
+        descIndices.forEach(i => {
+            if (used.has(i)) return;
+            const d = od.descs[i];
+            const pxW = d.w * 2 * referenceImg.width / 2.5;
+            const pxH = d.h * 2 * referenceImg.height / 2.5;
+            const pxCenterX = d.x * referenceImg.width / 2.5;
+            const pxCenterY = d.y * referenceImg.height / 2.5;
+            ws.shapes.push({
+                name: d.name, overlay: d.overlay !== null ? d.overlay : '',
+                type: d.type === 'radial' ? 'circle' : 'square',
+                left: pxCenterX - pxW/2, top: pxCenterY - pxH/2,
+                width: pxW, height: pxH,
+                movable: od.analogProps[i]?.movable ?? true,
+                range: od.analogProps[i]?.range_mod,
+                saturate: od.analogProps[i]?.saturate_pct
+            });
+        });
+
+        workspaces.push(ws);
+    });
+
+    activeWsId = workspaces[0].id;
+    renderTabs();
+    renderActiveWorkspace();
+    updateVisibility();
+    calculateAllCoordinates();
+}
+
+// ============ DESCARGA ============
 function downloadConfig() {
     const data = coordinatesDiv.value;
     let filename = document.getElementById('filename').value.trim() || 'config';
@@ -368,6 +1252,10 @@ function downloadConfig() {
     document.body.removeChild(a);
     alert('Archivo descargado: ' + filename);
 }
+
+// ============ INIT ============
+updateVisibility();
+renderTabs();
 </script>
 </body>
 </html>
